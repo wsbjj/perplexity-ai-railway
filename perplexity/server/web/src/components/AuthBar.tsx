@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { verifyAdminToken } from 'lib/api'
+import { useI18n } from 'lib/i18n'
 
 interface AuthBarProps {
   adminToken: string
@@ -16,6 +17,7 @@ export function AuthBar({
   onLogout,
   onAuthError,
 }: AuthBarProps) {
+  const { t } = useI18n()
   const [inputToken, setInputToken] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [showToken, setShowToken] = useState(false)
@@ -37,15 +39,15 @@ export function AuthBar({
           onLogin(token)
           setInputToken('')
         } else {
-          onAuthError?.('Invalid admin token')
+          onAuthError?.(t('Invalid admin token'))
         }
       } catch {
-        onAuthError?.('Failed to verify token')
+        onAuthError?.(t('Failed to verify token'))
       } finally {
         setIsVerifying(false)
       }
     }, 300)
-  }, [inputToken, isVerifying, onLogin, onAuthError])
+  }, [inputToken, isVerifying, onLogin, onAuthError, t])
 
   return (
     <div className="mb-8 p-4 border-2 border-gray-700 bg-gray-900/50">
@@ -55,7 +57,7 @@ export function AuthBar({
             className={`w-3 h-3 rounded-full ${isAuthenticated ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`}
           ></span>
           <span className="font-mono text-xs uppercase tracking-widest text-gray-500">
-            {isAuthenticated ? 'AUTHENTICATED' : 'GUEST_MODE'}
+            {isAuthenticated ? t('AUTHENTICATED') : t('GUEST_MODE')}
           </span>
         </div>
 
@@ -64,7 +66,7 @@ export function AuthBar({
             <div className="relative flex-1">
               <input
                 type={showToken ? 'text' : 'password'}
-                placeholder="ADMIN_TOKEN..."
+                placeholder={t('ADMIN_TOKEN...')}
                 value={inputToken}
                 onChange={(e) => setInputToken(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !isVerifying && handleAuth()}
@@ -93,19 +95,19 @@ export function AuthBar({
               disabled={isVerifying}
               className="px-4 py-2 bg-neon-pink text-black font-bold font-mono text-sm uppercase hover:bg-white transition-colors shadow-hard-acid hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isVerifying ? 'VERIFYING...' : 'AUTH'}
+              {isVerifying ? t('VERIFYING...') : t('AUTH')}
             </button>
           </div>
         ) : (
           <div className="flex gap-2 items-center">
             <span className="font-mono text-xs text-gray-400">
-              TOKEN: ****{adminToken.slice(-4)}
+              {t('TOKEN: ****{tail}', { tail: adminToken.slice(-4) })}
             </span>
             <button
               onClick={onLogout}
               className="px-3 py-1 border border-gray-600 font-mono text-xs text-gray-400 hover:bg-gray-800 transition-colors"
             >
-              LOGOUT
+              {t('LOGOUT')}
             </button>
           </div>
         )}

@@ -4,18 +4,21 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { App } from 'components/App'
 import { Playground } from 'pages/Playground'
 import { Layout } from 'components/Layout'
+import { I18nProvider } from 'lib/i18n'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/admin/*" element={<App />} />
-          <Route path="/playground/*" element={<Playground />} />
-          <Route path="*" element={<Navigate to="/admin/" replace />} />
-        </Routes>
-      </Layout>
-    </BrowserRouter>
+    <I18nProvider>
+      <BrowserRouter>
+        <Layout>
+          <Routes>
+            <Route path="/admin/*" element={<App />} />
+            <Route path="/playground/*" element={<Playground />} />
+            <Route path="*" element={<Navigate to="/admin/" replace />} />
+          </Routes>
+        </Layout>
+      </BrowserRouter>
+    </I18nProvider>
   </StrictMode>
 )

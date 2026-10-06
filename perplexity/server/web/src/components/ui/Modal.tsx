@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { useI18n } from 'lib/i18n'
 
 interface ModalProps {
   isOpen: boolean
@@ -23,6 +24,8 @@ export function Modal({
   borderColor = 'border-acid',
   confirmDisabled = false,
 }: ModalProps) {
+  const { t } = useI18n()
+
   if (!isOpen) return null
 
   return (
@@ -35,14 +38,14 @@ export function Modal({
         >
           SYSTEM_MSG
         </div>
-        <h3 className="text-3xl font-black uppercase mb-8 text-white">{title}</h3>
+        <h3 className="text-3xl font-black uppercase mb-8 text-white">{t(title)}</h3>
         <div className="text-gray-200">{children}</div>
         <div className="flex justify-end gap-4 mt-10">
           <button
             onClick={onClose}
             className="px-6 py-3 font-mono text-sm border border-gray-600 hover:bg-gray-800 transition-colors text-gray-400"
           >
-            CANCEL
+            {t('CANCEL')}
           </button>
           <button
             onClick={onConfirm}
@@ -53,7 +56,7 @@ export function Modal({
                 : 'hover:bg-white'
             }`}
           >
-            {confirmText}
+            {t(confirmText)}
           </button>
         </div>
       </div>

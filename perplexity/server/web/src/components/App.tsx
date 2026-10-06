@@ -5,6 +5,7 @@ import { usePool } from 'hooks/usePool'
 import { useVersionCheck } from 'hooks/useVersionCheck'
 import { apiCall, importTokenConfig, TokenConfig } from 'lib/api'
 import { hasAccountAuth, TokenAuth } from 'lib/tokenCookies'
+import { useI18n } from 'lib/i18n'
 import { AuthBar } from './AuthBar'
 import { StatsGrid } from './StatsGrid'
 import { HeartbeatPanel } from './HeartbeatPanel'
@@ -12,11 +13,13 @@ import { TokenTable } from './TokenTable'
 import { AddTokenModal } from './AddTokenModal'
 import { ConfirmModal } from './ConfirmModal'
 import { Toast } from './ui/Toast'
+import { LanguageSwitcher } from './ui/LanguageSwitcher'
 import { LogsPanel } from './logs/LogsPanel'
 
 type TabType = 'pool' | 'logs'
 
 export function App() {
+  const { t } = useI18n()
   const { adminToken, isAuthenticated, login, logout } = useAuth()
   const { toasts, addToast, removeToast } = useToast()
   const { data, hbConfig, setHbConfig, fallbackConfig, setFallbackConfig, incognitoConfig, setIncognitoConfig, lastSync, refreshData } = usePool()
@@ -71,7 +74,7 @@ export function App() {
       try {
         const resp = await importTokenConfig(tokens, adminToken)
         if (resp.status === 'ok') {
-          addToast(`IMPORTED_${tokens.length}_TOKENS`, 'success')
+          addToast(t('Imported {count} token(s)', { count: tokens.length }), 'success')
           setIsAddModalOpen(false)
           refreshData()
         } else {
@@ -91,7 +94,9 @@ export function App() {
         return
       }
       setConfirmMessage(
-        `Are you sure you want to permanently delete token "${id}"? This action is irreversible.`
+        t('Are you sure you want to permanently delete token "{id}"? This action is irreversible.', {
+          id,
+        })
       )
       setConfirmAction(() => () => handleDeleteToken(id))
       setIsConfirmModalOpen(true)
@@ -128,21 +133,24 @@ export function App() {
                   rel="noopener noreferrer"
                   className="ml-3 font-mono text-xs bg-neon-pink text-gray-900 px-2 py-1 uppercase font-bold hover:bg-white transition-colors animate-pulse"
                 >
-                  Update Available: {versionInfo.latestVersion}
+                  {t('Update Available: {version}', { version: versionInfo.latestVersion })}
                 </a>
               )}
             </div>
             <div className="font-mono text-xs md:text-sm text-right">
-              <a
-                href="/playground/"
-                className="inline-block mb-2 text-neon-pink hover:text-acid border-2 border-neon-pink hover:border-acid px-3 py-1 transition-colors uppercase"
-              >
-                API Playground &rarr;
-              </a>
-              <div className="text-acid">
-                {lastSync ? `LAST_SYNC: ${lastSync}` : 'SYNCING...'}
+              <div className="mb-2 flex items-center justify-end gap-2">
+                <LanguageSwitcher />
+                <a
+                  href="/playground/"
+                  className="inline-block text-neon-pink hover:text-acid border-2 border-neon-pink hover:border-acid px-3 py-1 transition-colors uppercase"
+                >
+                  {t('API Playground')} &rarr;
+                </a>
               </div>
-              <div className="text-gray-500">SYSTEM_STATUS: ONLINE</div>
+              <div className="text-acid">
+                {lastSync ? t('LAST_SYNC: {time}', { time: lastSync }) : t('SYNCING...')}
+              </div>
+              <div className="text-gray-500">{t('SYSTEM_STATUS: ONLINE')}</div>
             </div>
           </div>
         </header>
@@ -167,7 +175,7 @@ export function App() {
                   : 'border-gray-600 text-gray-400 hover:border-gray-400'
               }`}
             >
-              Token Pool
+              {t('Token Pool')}
             </button>
             <button
               onClick={() => setActiveTab('logs')}
@@ -177,7 +185,7 @@ export function App() {
                   : 'border-gray-600 text-gray-400 hover:border-gray-400'
               }`}
             >
-              Logs
+              {t('Logs')}
             </button>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { useLogs, RefreshInterval } from 'hooks/useLogs'
+import { useI18n } from 'lib/i18n'
 
 interface LogsPanelProps {
   adminToken: string
@@ -46,6 +47,7 @@ function highlightMatch(line: string, query: string): JSX.Element {
 }
 
 export function LogsPanel({ adminToken }: LogsPanelProps) {
+  const { t } = useI18n()
   const {
     filteredLines,
     totalLines,
@@ -68,7 +70,7 @@ export function LogsPanel({ adminToken }: LogsPanelProps) {
       <div className="flex flex-col gap-4 rounded border-2 border-gray-700 bg-gray-900 p-4 md:flex-row md:items-center md:justify-between">
         {/* Auto Refresh Controls */}
         <div className="flex items-center gap-4">
-          <span className="font-mono text-xs uppercase text-gray-400">Auto_Refresh:</span>
+          <span className="font-mono text-xs uppercase text-gray-400">{t('Auto_Refresh:')}</span>
           <div className="flex">
             <button
               onClick={() => setIsAutoRefresh(true)}
@@ -78,7 +80,7 @@ export function LogsPanel({ adminToken }: LogsPanelProps) {
                   : 'border-gray-600 text-gray-400 hover:border-gray-400'
               }`}
             >
-              ON
+              {t('ON')}
             </button>
             <button
               onClick={() => setIsAutoRefresh(false)}
@@ -88,7 +90,7 @@ export function LogsPanel({ adminToken }: LogsPanelProps) {
                   : 'border-gray-600 text-gray-400 hover:border-gray-400'
               }`}
             >
-              OFF
+              {t('OFF')}
             </button>
           </div>
 
@@ -116,7 +118,7 @@ export function LogsPanel({ adminToken }: LogsPanelProps) {
           <div className="relative">
             <input
               type="text"
-              placeholder="Filter logs..."
+              placeholder={t('Filter logs...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-48 border-2 border-gray-600 bg-gray-800 px-3 py-1 font-mono text-sm text-gray-200 placeholder-gray-500 focus:border-acid focus:outline-none"
@@ -140,7 +142,7 @@ export function LogsPanel({ adminToken }: LogsPanelProps) {
                 : 'border-acid text-acid hover:bg-acid/10'
             }`}
           >
-            {isLoading ? 'Loading...' : 'Refresh'}
+            {isLoading ? t('Loading...') : t('Refresh')}
           </button>
         </div>
       </div>
@@ -148,23 +150,23 @@ export function LogsPanel({ adminToken }: LogsPanelProps) {
       {/* Log Content */}
       {error ? (
         <div className="flex h-96 flex-col items-center justify-center rounded border-2 border-red-500/50 bg-gray-900">
-          <div className="mb-2 font-mono text-red-400">ERROR</div>
+          <div className="mb-2 font-mono text-red-400">{t('logs.ERROR')}</div>
           <div className="font-mono text-sm text-gray-400">{error}</div>
           <button
             onClick={refresh}
             className="mt-4 border-2 border-red-400 px-4 py-2 font-mono text-sm text-red-400 hover:bg-red-400/10"
           >
-            RETRY
+            {t('RETRY')}
           </button>
         </div>
       ) : isLoading && filteredLines.length === 0 ? (
         <div className="flex h-96 items-center justify-center rounded border-2 border-gray-700 bg-gray-900">
-          <div className="animate-pulse font-mono text-acid">LOADING_LOGS...</div>
+          <div className="animate-pulse font-mono text-acid">{t('LOADING_LOGS...')}</div>
         </div>
       ) : filteredLines.length === 0 ? (
         <div className="flex h-96 items-center justify-center rounded border-2 border-gray-700 bg-gray-900">
           <div className="font-mono text-gray-500">
-            {searchQuery ? 'NO_MATCHING_LOGS' : 'NO_LOGS_FOUND'}
+            {searchQuery ? t('NO_MATCHING_LOGS') : t('NO_LOGS_FOUND')}
           </div>
         </div>
       ) : (
@@ -180,12 +182,15 @@ export function LogsPanel({ adminToken }: LogsPanelProps) {
       {/* Status Bar */}
       <div className="flex justify-between font-mono text-xs text-gray-500">
         <span>
-          SHOWING: {filteredLines.length} / {totalLines} lines
-          {searchQuery && ` (filtered)`}
+          {t('SHOWING: {shown} / {total} lines', {
+            shown: filteredLines.length,
+            total: totalLines,
+          })}
+          {searchQuery && ` ${t('(filtered)')}`}
         </span>
         <span className="flex gap-4">
-          <span>FILE_SIZE: {(fileSize / 1024).toFixed(1)} KB</span>
-          {lastUpdate && <span>LAST_UPDATE: {lastUpdate}</span>}
+          <span>{t('FILE_SIZE: {size} KB', { size: (fileSize / 1024).toFixed(1) })}</span>
+          {lastUpdate && <span>{t('LAST_UPDATE: {time}', { time: lastUpdate })}</span>}
         </span>
       </div>
     </div>

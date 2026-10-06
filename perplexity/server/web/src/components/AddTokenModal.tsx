@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { Modal } from './ui/Modal'
 import { TokenConfig } from 'lib/api'
 import { hasAccountAuth, parseAuthCookies, TokenAuth } from 'lib/tokenCookies'
+import { useI18n } from 'lib/i18n'
 
 interface AddTokenModalProps {
   isOpen: boolean
@@ -11,6 +12,7 @@ interface AddTokenModalProps {
 }
 
 export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: AddTokenModalProps) {
+  const { t } = useI18n()
   const [form, setForm] = useState({
     id: '',
     csrf: '',
@@ -83,26 +85,26 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
         } else if (parsed.tokens && Array.isArray(parsed.tokens)) {
           tokens = parsed.tokens
         } else {
-          throw new Error('Invalid format: expected array of tokens')
+          throw new Error(t('Invalid format: expected array of tokens'))
         }
 
         // Validate token structure
         for (const token of tokens) {
           if (!token.id || !hasAccountAuth(token)) {
             throw new Error(
-              'Invalid token entry: id plus csrf_token/session_token or cookies required'
+              t('Invalid token entry: id plus csrf_token/session_token or cookies required')
             )
           }
         }
 
         setUploadedTokens(tokens)
       } catch (err) {
-        setUploadError(err instanceof Error ? err.message : 'Failed to parse config file')
+        setUploadError(err instanceof Error ? err.message : t('Failed to parse config file'))
         setUploadedTokens(null)
       }
     }
     reader.onerror = () => {
-      setUploadError('Failed to read file')
+      setUploadError(t('Failed to read file'))
       setUploadedTokens(null)
     }
     reader.readAsText(file)
@@ -134,7 +136,7 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
                 : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
             }`}
           >
-            Manual Input
+            {t('Manual Input')}
           </button>
           <button
             onClick={() => setMode('upload')}
@@ -144,7 +146,7 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
                 : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
             }`}
           >
-            Upload Config
+            {t('Upload Config')}
           </button>
         </div>
 
@@ -152,7 +154,7 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
           <>
             <div>
               <label className="block font-mono text-xs text-acid mb-2 uppercase tracking-widest">
-                Identifier
+                {t('Identifier')}
               </label>
               <input
                 type="text"
@@ -171,7 +173,7 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
                     : 'bg-gray-900 text-gray-500 hover:bg-gray-800'
                 }`}
               >
-                Session Cookies
+                {t('Session Cookies')}
               </button>
               <button
                 onClick={() => setAuthMode('legacy')}
@@ -181,13 +183,13 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
                     : 'bg-gray-900 text-gray-500 hover:bg-gray-800'
                 }`}
               >
-                Legacy Tokens
+                {t('Legacy Tokens')}
               </button>
             </div>
             {authMode === 'cookies' ? (
               <div>
                 <label className="block font-mono text-xs text-acid mb-2 uppercase tracking-widest">
-                  Cookies
+                  {t('Cookies')}
                 </label>
                 <textarea
                   rows={4}
@@ -199,17 +201,18 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
                   className="w-full bg-gray-900 border-b-2 border-gray-700 p-3 text-white font-mono focus:outline-none focus:border-acid focus:bg-gray-800 transition-colors placeholder-gray-700 text-xs"
                 ></textarea>
                 <p className="mt-2 font-mono text-xs text-gray-500">
-                  Paste the Cookie header (DevTools → Network) or a JSON object.
-                  Only Perplexity session cookies are kept.
+                  {t(
+                    'Paste the Cookie header (DevTools → Network) or a JSON object. Only Perplexity session cookies are kept.'
+                  )}
                 </p>
                 {form.cookies.trim() &&
                   (parsedCookies ? (
                     <p className="mt-1 font-mono text-xs text-acid">
-                      Detected: {detectedCookies.join(', ')}
+                      {t('Detected: {list}', { list: detectedCookies.join(', ') })}
                     </p>
                   ) : (
                     <p className="mt-1 font-mono text-xs text-red-400">
-                      No __Secure-pplx.session.* cookie found
+                      {t('No __Secure-pplx.session.* cookie found')}
                     </p>
                   ))}
               </div>
@@ -217,7 +220,7 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
               <>
                 <div>
                   <label className="block font-mono text-xs text-acid mb-2 uppercase tracking-widest">
-                    CSRF Token
+                    {t('CSRF Token')}
                   </label>
                   <textarea
                     rows={2}
@@ -229,7 +232,7 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
                 </div>
                 <div>
                   <label className="block font-mono text-xs text-acid mb-2 uppercase tracking-widest">
-                    Session Token
+                    {t('Session Token')}
                   </label>
                   <textarea
                     rows={3}
@@ -248,7 +251,7 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
           <div className="space-y-4">
             <div>
               <label className="block font-mono text-xs text-acid mb-2 uppercase tracking-widest">
-                Upload Config File (JSON)
+                {t('Upload Config File (JSON)')}
               </label>
               <input
                 ref={fileInputRef}
@@ -263,27 +266,27 @@ export function AddTokenModal({ isOpen, onClose, onSubmit, onImportConfig }: Add
               >
                 {uploadedTokens ? (
                   <span className="text-acid">
-                    Config loaded: {uploadedTokens.length} token(s)
+                    {t('Config loaded: {count} token(s)', { count: uploadedTokens.length })}
                   </span>
                 ) : (
-                  'Click to select tokens.json'
+                  t('Click to select tokens.json')
                 )}
               </button>
             </div>
 
             {uploadError && (
               <div className="bg-red-900/30 border border-red-500 p-3 text-red-400 font-mono text-xs">
-                ERROR: {uploadError}
+                {t('ERROR: {msg}', { msg: uploadError })}
               </div>
             )}
 
             {uploadedTokens && (
               <div className="bg-gray-900 border border-gray-700 p-4 font-mono text-xs space-y-2">
                 <div className="text-gray-400">
-                  <span className="text-acid">Tokens:</span> {uploadedTokens.length}
+                  <span className="text-acid">{t('Tokens')}:</span> {uploadedTokens.length}
                 </div>
                 <div className="text-gray-500 mt-2 pt-2 border-t border-gray-700">
-                  IDs: {uploadedTokens.map(t => t.id).join(', ')}
+                  {t('IDs: {list}', { list: uploadedTokens.map((item) => item.id).join(', ') })}
                 </div>
               </div>
             )}

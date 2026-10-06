@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { HeartbeatConfig, updateHeartbeatConfig, apiCall } from 'lib/api'
+import { useI18n } from 'lib/i18n'
 
 interface HeartbeatPanelProps {
   hbConfig: HeartbeatConfig
@@ -18,6 +19,7 @@ export function HeartbeatPanel({
   onToast,
   onRefresh,
 }: HeartbeatPanelProps) {
+  const { t } = useI18n()
   const [isConfigOpen, setIsConfigOpen] = useState(false)
   const [isGlobalTesting, setIsGlobalTesting] = useState(false)
   const [configForm, setConfigForm] = useState({
@@ -41,7 +43,7 @@ export function HeartbeatPanel({
     try {
       const resp = await apiCall(`heartbeat/${action}`, {}, adminToken)
       if (resp.status === 'ok') {
-        onToast(`AUTO_RENEW_COOKIE_${action.toUpperCase()}_OK`, 'success')
+        onToast(t(`Auto renew ${action} OK`), 'success')
         onRefresh()
       } else {
         onToast(resp.message || 'ERROR', 'error')
@@ -77,15 +79,17 @@ export function HeartbeatPanel({
     <div className="mb-8 p-4 border border-gray-700 bg-gray-900/30">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h3 className="font-bold text-white uppercase tracking-wider">♥ Auto Renew Cookie</h3>
-          <div className="text-xs font-mono text-gray-500">RENEW INTERVAL: {hbConfig.interval}H</div>
+          <h3 className="font-bold text-white uppercase tracking-wider">{t('♥ Auto Renew Cookie')}</h3>
+          <div className="text-xs font-mono text-gray-500">
+            {t('RENEW INTERVAL: {n}H', { n: hbConfig.interval })}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsConfigOpen(!isConfigOpen)}
             className="px-3 py-1 bg-gray-800 border border-gray-600 hover:bg-white hover:text-black font-mono text-xs uppercase transition-colors"
           >
-            {isConfigOpen ? 'Hide Config' : 'Config'}
+            {isConfigOpen ? t('Hide Config') : t('Config')}
           </button>
           <button
             onClick={() => handleAutoRenewAction('test')}
@@ -96,7 +100,7 @@ export function HeartbeatPanel({
                 : 'hover:bg-neon-blue hover:text-black'
             }`}
           >
-            {isGlobalTesting ? 'Renewing...' : 'Renew All Cookies'}
+            {isGlobalTesting ? t('Renewing...') : t('Renew All Cookies')}
           </button>
         </div>
       </div>
@@ -106,7 +110,7 @@ export function HeartbeatPanel({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block font-mono text-xs text-gray-500 mb-1 uppercase">
-                Auto Renew Cookie
+                {t('Auto Renew Cookie')}
               </label>
               <select
                 value={configForm.enable ? 'true' : 'false'}
@@ -115,13 +119,13 @@ export function HeartbeatPanel({
                 }
                 className="w-full bg-gray-800 border border-gray-700 px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-acid"
               >
-                <option value="true">Enabled</option>
-                <option value="false">Disabled</option>
+                <option value="true">{t('Enabled')}</option>
+                <option value="false">{t('Disabled')}</option>
               </select>
             </div>
             <div>
               <label className="block font-mono text-xs text-gray-500 mb-1 uppercase">
-                Interval (Hours)
+                {t('Interval (Hours)')}
               </label>
               <input
                 type="number"
@@ -137,7 +141,7 @@ export function HeartbeatPanel({
             </div>
             <div>
               <label className="block font-mono text-xs text-gray-500 mb-1 uppercase">
-                Health Check Question
+                {t('Health Check Question')}
               </label>
               <input
                 type="text"
@@ -148,7 +152,7 @@ export function HeartbeatPanel({
             </div>
             <div>
               <label className="block font-mono text-xs text-gray-500 mb-1 uppercase">
-                Telegram Bot Token
+                {t('Telegram Bot Token')}
               </label>
               <input
                 type="password"
@@ -156,13 +160,13 @@ export function HeartbeatPanel({
                 onChange={(e) =>
                   setConfigForm({ ...configForm, tg_bot_token: e.target.value || null })
                 }
-                placeholder="Optional..."
+                placeholder={t('Optional...')}
                 className="w-full bg-gray-800 border border-gray-700 px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-acid placeholder-gray-600"
               />
             </div>
             <div>
               <label className="block font-mono text-xs text-gray-500 mb-1 uppercase">
-                Telegram Chat ID
+                {t('Telegram Chat ID')}
               </label>
               <input
                 type="text"
@@ -170,7 +174,7 @@ export function HeartbeatPanel({
                 onChange={(e) =>
                   setConfigForm({ ...configForm, tg_chat_id: e.target.value || null })
                 }
-                placeholder="Optional..."
+                placeholder={t('Optional...')}
                 className="w-full bg-gray-800 border border-gray-700 px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-acid placeholder-gray-600"
               />
             </div>
@@ -179,7 +183,7 @@ export function HeartbeatPanel({
                 onClick={handleSaveConfig}
                 className="px-4 py-2 bg-acid text-black font-bold font-mono text-sm uppercase hover:bg-white transition-colors shadow-hard-acid hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
               >
-                Save Config
+                {t('Save Config')}
               </button>
             </div>
           </div>

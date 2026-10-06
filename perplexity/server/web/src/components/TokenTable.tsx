@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ClientInfo, apiCall, updateFallbackConfig, updateIncognitoConfig, downloadSingleTokenConfig } from 'lib/api'
+import { useI18n } from 'lib/i18n'
 
 interface TokenTableProps {
   clients: ClientInfo[]
@@ -28,6 +29,7 @@ export function TokenTable({
   onFallbackChange,
   onIncognitoChange,
 }: TokenTableProps) {
+  const { t } = useI18n()
   const [testingIds, setTestingIds] = useState<Set<string>>(new Set())
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
   const [updatingFallback, setUpdatingFallback] = useState(false)
@@ -54,13 +56,16 @@ export function TokenTable({
 
     const resp = await apiCall(action, { id }, adminToken)
     const actionMap: Record<string, string> = {
-      enable: 'ONLINE',
-      disable: 'OFFLINE',
-      reset: 'RESET',
+      enable: 'action.ONLINE',
+      disable: 'action.OFFLINE',
+      reset: 'action.RESET',
     }
 
     if (resp.status === 'ok') {
-      onToast(`CLIENT_${id}_${actionMap[action]}`, 'success')
+      onToast(
+        t('Client {id}: {state}', { id, state: t(actionMap[action] ?? 'ERROR') }),
+        'success'
+      )
       onRefresh()
     } else {
       onToast(resp.message || 'ERROR', 'error')
@@ -77,7 +82,7 @@ export function TokenTable({
     try {
       const resp = await apiCall('heartbeat/test', { id }, adminToken)
       if (resp.status === 'ok') {
-        onToast(`TEST_${id}_OK`, 'success')
+        onToast(t('Account {id} renewed', { id }), 'success')
         onRefresh()
       } else {
         onToast(resp.error || resp.message || 'TEST_FAILED', 'error')
@@ -105,8 +110,8 @@ export function TokenTable({
         onFallbackChange(newValue)
         onToast(
           newValue
-            ? 'Downgrade mode active. If req fail, Perplexity free model will auto use.'
-            : 'Pro mode active. If req fail, will throw error.',
+            ? t('Downgrade mode active. If req fail, Perplexity free model will auto use.')
+            : t('Pro mode active. If req fail, will throw error.'),
           'success'
         )
       } else {
@@ -131,8 +136,8 @@ export function TokenTable({
         onIncognitoChange(newValue)
         onToast(
           newValue
-            ? 'Incognito mode ON. All queries will not save history.'
-            : 'Incognito mode OFF. Queries will save history normally.',
+            ? t('Incognito mode ON. All queries will not save history.')
+            : t('Incognito mode OFF. Queries will save history normally.'),
           'success'
         )
       } else {
@@ -179,7 +184,7 @@ export function TokenTable({
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-gray-800 pb-6">
           <h2 className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3">
             <span className="w-3 h-3 bg-acid block animate-pulse"></span>
-            Active Tokens
+            {t('Active Tokens')}
           </h2>
           <div className="flex gap-3">
             <button
@@ -209,7 +214,7 @@ export function TokenTable({
                   }
                 />
               </svg>
-              {updatingIncognito ? '...' : incognitoEnabled ? 'INCOGNITO' : 'NORMAL'}
+              {updatingIncognito ? '...' : incognitoEnabled ? t('INCOGNITO') : t('NORMAL')}
             </button>
             <button
               onClick={handleToggleFallback}
@@ -235,7 +240,7 @@ export function TokenTable({
                   d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
                 />
               </svg>
-              {updatingFallback ? '...' : fallbackToAuto ? 'DOWNGRADE' : 'PRO'}
+              {updatingFallback ? '...' : fallbackToAuto ? t('DOWNGRADE') : t('PRO')}
             </button>
             <button
               onClick={() => {
@@ -251,7 +256,7 @@ export function TokenTable({
                   : 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed'
               }`}
             >
-              + NEW TOKEN
+              {t('+ NEW TOKEN')}
             </button>
           </div>
         </div>
@@ -259,29 +264,29 @@ export function TokenTable({
         <div className="overflow-x-auto">
           {!clients || clients.length === 0 ? (
             <div className="text-center py-20 font-mono text-gray-500 border-2 border-dashed border-gray-800">
-              NO_DATA_FOUND // INJECT_NEW_TOKEN
+              {t('NO_DATA_FOUND // INJECT_NEW_TOKEN')}
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b-2 border-gray-700">
                   <th className="p-4 font-mono text-xs text-gray-500 uppercase tracking-widest">
-                    Identifier
+                    {t('Identifier')}
                   </th>
                   <th className="p-4 font-mono text-xs text-gray-500 uppercase tracking-widest">
-                    State
+                    {t('State')}
                   </th>
                   <th className="p-4 font-mono text-xs text-gray-500 uppercase tracking-widest">
-                    Dynamic Weight
+                    {t('Dynamic Weight')}
                   </th>
                   <th className="p-4 font-mono text-xs text-gray-500 uppercase tracking-widest">
-                    Reqs
+                    {t('Reqs')}
                   </th>
                   <th className="p-4 font-mono text-xs text-gray-500 uppercase tracking-widest">
-                    Last Check
+                    {t('Last Check')}
                   </th>
                   <th className="p-4 font-mono text-xs text-gray-500 uppercase tracking-widest text-right">
-                    Controls
+                    {t('Controls')}
                   </th>
                 </tr>
               </thead>
@@ -309,27 +314,27 @@ export function TokenTable({
                     <td className="p-4">
                       {!c.enabled ? (
                         <span className="px-2 py-1 bg-gray-800 text-gray-500 text-xs border border-gray-700">
-                          DISABLED
+                          {t('DISABLED')}
                         </span>
                       ) : !c.available ? (
                         <span className="px-2 py-1 bg-yellow-900/30 text-yellow-400 text-xs border border-yellow-900">
-                          BACKOFF
+                          {t('state.BACKOFF')}
                         </span>
                       ) : c.state === 'offline' ? (
                         <span className="px-2 py-1 bg-red-900/30 text-red-400 text-xs border border-red-900">
-                          OFFLINE
+                          {t('state.OFFLINE')}
                         </span>
                       ) : c.state === 'downgrade' ? (
                         <span className="px-2 py-1 bg-orange-900/30 text-orange-400 text-xs border border-orange-900">
-                          DOWNGRADE
+                          {t('state.DOWNGRADE')}
                         </span>
                       ) : c.state === 'normal' ? (
                         <span className="px-2 py-1 bg-green-900/30 text-green-400 text-xs border border-green-900">
-                          PRO
+                          {t('state.PRO')}
                         </span>
                       ) : (
                         <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs border border-blue-900">
-                          READY
+                          {t('state.READY')}
                         </span>
                       )}
                     </td>
@@ -372,7 +377,7 @@ export function TokenTable({
                               : 'cursor-not-allowed opacity-50'
                           }`}
                           onClick={() => handleDownload(c.id)}
-                          title="Download Config"
+                          title={t('Download Config')}
                           disabled={!isAuthenticated || downloadingIds.has(c.id)}
                         >
                           {downloadingIds.has(c.id) ? '[...]' : '[DL]'}
@@ -381,7 +386,7 @@ export function TokenTable({
                           <button
                             className={`p-1 transition-colors ${isAuthenticated ? 'hover:text-yellow-500' : 'cursor-not-allowed'}`}
                             onClick={() => handleClientAction('disable', c.id)}
-                            title="Disable"
+                            title={t('Disable')}
                             disabled={!isAuthenticated}
                           >
                             [PAUSE]
@@ -390,7 +395,7 @@ export function TokenTable({
                           <button
                             className={`p-1 transition-colors ${isAuthenticated ? 'hover:text-green-500' : 'cursor-not-allowed'}`}
                             onClick={() => handleClientAction('enable', c.id)}
-                            title="Enable"
+                            title={t('Enable')}
                             disabled={!isAuthenticated}
                           >
                             [RESUME]
@@ -403,7 +408,7 @@ export function TokenTable({
                               : 'cursor-not-allowed opacity-50'
                           }`}
                           onClick={() => handleTestClient(c.id)}
-                          title="Renew Cookie"
+                          title={t('Renew Cookie')}
                           disabled={!isAuthenticated || testingIds.has(c.id)}
                         >
                           [TEST]
@@ -411,7 +416,7 @@ export function TokenTable({
                         <button
                           className={`p-1 transition-colors ${isAuthenticated ? 'hover:text-danger' : 'cursor-not-allowed'}`}
                           onClick={() => onConfirmDelete(c.id)}
-                          title="Remove"
+                          title={t('Remove')}
                           disabled={!isAuthenticated}
                         >
                           [DEL]

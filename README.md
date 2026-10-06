@@ -2,7 +2,7 @@
 
 **中文** ｜ [English](README.en.md)
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/6Y_92D)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/perplexity-ai)
 
 用你自己的 Perplexity 订阅额度，自建一套 OpenAI 兼容 API + MCP 服务，并附带一个号池管理面板。
 
@@ -44,9 +44,9 @@
 
 ## 一键部署到 Railway
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/6Y_92D)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/perplexity-ai)
 
-模版地址：<https://railway.com/template/6Y_92D>
+模版地址：<https://railway.com/template/perplexity-ai>
 
 部署时 Railway 会要求你填两个变量，**随机字符串即可**（可以用 `openssl rand -hex 32` 生成）：
 

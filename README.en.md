@@ -2,7 +2,7 @@
 
 [中文](README.md) ｜ **English**
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/6Y_92D)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/perplexity-ai)
 
 Self-host an OpenAI-compatible API plus an MCP server on top of your own Perplexity
 subscription, with a built-in token-pool dashboard.
@@ -45,9 +45,9 @@ official API credits. Proxying does not add quota — it only changes the entry 
 
 ## Deploy to Railway
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/6Y_92D)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/perplexity-ai)
 
-Template page: <https://railway.com/template/6Y_92D>
+Template page: <https://railway.com/template/perplexity-ai>
 
 Railway will ask for two variables. **Any random string works** (`openssl rand -hex 32`):
 

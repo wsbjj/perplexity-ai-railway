@@ -1,405 +1,269 @@
-# Thanks for [LINUX DO](https://linux.do/)
+# Perplexity MCP Server（Railway 部署版）
 
-# Perplexity MCP Server
+**中文** ｜ [English](README.en.md)
 
-[![中文文档](https://img.shields.io/badge/docs-中文-blue.svg)](README-zh.md)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/6Y_92D)
 
-An unofficial Perplexity.ai server that exposes search capabilities through MCP (Model Context Protocol) and OpenAI-compatible endpoints. Supports multi-token pools for load balancing, health monitoring, and various search modes.
+用你自己的 Perplexity 订阅额度，自建一套 OpenAI 兼容 API + MCP 服务，并附带一个号池管理面板。
 
-## AGENT READ — Deployment
+> 本项目是 [escapeWu/perplexity-ai](https://github.com/escapeWu/perplexity-ai) 的 fork，
+> 针对 Railway 部署做了适配与若干兼容性修复。上游代码逻辑未做删改，只在必要处打补丁。
 
-> Read this section before advising on or executing deployment. A request for documentation,
-> explanation, or review does **not** authorize a live deployment. Only change a server when the
-> user explicitly asks to deploy, update, rebuild, restart, or roll out the service.
+---
 
-### Route the request
+## 这是什么
 
-| User intent | Agent action |
-|---|---|
-| Explain or prepare a local installation | Use the Quick Start below; do not change remote systems. |
-| Deploy the configured production server | Follow [`.agents/skills/server-deploy/SKILL.md`](.agents/skills/server-deploy/SKILL.md) exactly. |
-| Validate or diagnose a deployment | Start with `config`, `verify`, `status`, and `logs`; inspect evidence before changing state. |
+它不做模型推理，而是复用你浏览器里已登录的 Perplexity 会话（cookie 登录态），
+把网页版内部的搜索/RPC 接口翻译成标准协议对外提供：
 
-Treat [`docker-compose.yml`](docker-compose.yml), [`.env.example`](.env.example), and
-[`deploy/compose.sh`](deploy/compose.sh) as the deployment sources of truth. The production entry
-point builds from the checked-out source; do not wait for or substitute a Docker Hub `latest` image.
+| 能力 | 说明 |
+| --- | --- |
+| OpenAI 兼容接口 | `/v1/models`、`/v1/chat/completions`（支持流式、思考模型、文件） |
+| MCP 服务 | `/mcp`，供 Claude Code、Codex 等支持 MCP 的客户端直接调用 |
+| 号池管理 | 支持多个 Perplexity 账号轮询、加权调度、失败退避、Cookie 自动续期 |
+| 管理面板 | `/admin/` 可视化增删账号、查看权重与请求计数、翻阅日志 |
+| 在线调试台 | `/playground/` 直接在浏览器里试模型、看搜索结果与思考过程 |
 
-### First-install prerequisites
+👉 **它消耗的是你订阅里的网页版额度**（Pro Search 次数、Deep Research 次数），
+不是官方 API 额度；反代不会让额度变多，只是换了个入口。
 
-- Require Docker with the Compose plugin.
-- Create `.env` and `token_pool_config.json` from their examples only when the destination files do
-  not already exist. Generate a strong `MCP_TOKEN` (for example with `openssl rand -hex 32`).
-- Keep `.env`, `token_pool_config.json`, `data/`, CSRF/session tokens, and admin tokens out of Git and
-  command output. Never overwrite the server copies during an update.
-- Preserve the mounted `data/` directory so the model cache and WebUI/OAI/MCP session database
-  survive container replacement.
-- On an Internet-facing host, bind to a loopback address and place the service behind TLS/reverse
-  proxying; see [`.env.example`](.env.example) for the port form.
+---
 
-Run the guarded deployment entrypoint from the repository checkout:
+## 与上游的差异
 
-```bash
-./deploy/compose.sh config
-./deploy/compose.sh up
-./deploy/compose.sh verify
-./deploy/compose.sh status
-```
+本 fork 只做了这些改动，其余与上游一致：
 
-`up` validates `.env` and the non-empty token pool, builds the application image from the current
-checkout, replaces the service, waits for container health, calls `/health`, and prints status.
+| 改动 | 说明 |
+| --- | --- |
+| `railway.toml` | 指定用仓库自带 Dockerfile 构建、以 `/ready` 作为健康检查、失败自动重启 |
+| 管理面板中英文切换 | 面板右上角 `EN / 中文` 按钮，偏好记录在浏览器本地，默认跟随浏览器语言 |
+| 兼容 `reasoning_effort` | Codex、opencodex 等客户端携带该字段时不再返回 400，而是按语义映射到 `thinking` |
+| 中英文文档 | 本文件为中文版并作为仓库默认 README，英文版见 [README.en.md](README.en.md) |
 
-### Production release contract
+---
 
-1. Review the intended local diff on `main`, commit only requested files, and push that exact commit.
-2. Confirm local `HEAD` equals `origin/main` before touching the server.
-3. Require a clean remote tracked worktree; use only a fast-forward pull and verify the remote SHA
-   equals the recorded local commit.
-4. Run `./deploy/compose.sh up`, followed by `verify` and `status`.
-5. Report the deployed commit, image ID, `/health` result, and final container state.
+## 一键部署到 Railway
 
-Stop on a dirty remote worktree, SHA mismatch, failed build, failed health check, or failed status
-check. Never force-push, run `git reset`/`git clean`, use `docker compose down`, delete images or
-volumes, or replace server secrets and persistent data as part of routine deployment.
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/6Y_92D)
 
-## Agent Search Skill
+模版地址：<https://railway.com/template/6Y_92D>
 
-This repository includes [`.agents/skills/perplexity-search/SKILL.md`](.agents/skills/perplexity-search/SKILL.md) for Agents that need current public-web information. MCP and REST use one call contract: the bundled `PerplexityRestClient` exposes the same `perplexity_ask_v2`, `perplexity_research_v2`, and detached-task method names, arguments, session behavior, and result shapes as the MCP tools.
+部署时 Railway 会要求你填两个变量，**随机字符串即可**（可以用 `openssl rand -hex 32` 生成）：
 
-Use the standard-library Python REST client when MCP is not the selected transport:
+| 变量 | 用途 |
+| --- | --- |
+| `MCP_TOKEN` | 调用 `/v1/*` 与 MCP 接口的密钥，客户端用它做 `Authorization: Bearer` |
+| `PPLX_ADMIN_TOKEN` | 登录 `/admin/` 管理面板、管理号池的密钥（与上面那个不要混用） |
 
-```python
-import sys
-sys.path.insert(0, ".agents/skills/perplexity-search/scripts")
-from client import PerplexityRestClient
+模版会自动创建持久卷并挂载到 `/app/data`（账号配置、日志、模型缓存、会话数据库都在这里，
+不挂卷重启就丢）。
 
-client = PerplexityRestClient.from_config()
-result = client.perplexity_ask_v2("What changed this week? Cite primary sources.")
-```
+### 部署后三步
 
-The command line uses the same operation names:
+**1. 生成公网域名**
+
+Railway 服务 → Settings → Networking → Generate Domain，端口填 `8000`。
+
+> 注意端口是 **8000**，不是 8080；Railway 公网只暴露 443/80，直接在地址后加 `:8080` 是打不开的。
+
+**2. 验证服务**
 
 ```bash
-python3 .agents/skills/perplexity-search/scripts/client.py \
-  perplexity_ask_v2 "What changed this week? Cite primary sources."
+D=https://你的域名
+curl -s $D/health                 # {"status":"healthy",...}
+curl -s $D/ready                  # {"status":"ready"}
+curl -s -H "Authorization: Bearer $MCP_TOKEN" $D/v1/models
 ```
 
-Set `PPLX_BASE_URL` and `MCP_TOKEN` for REST use. The checked-in configuration is sanitized and contains no deployment credentials.
+未绑定账号时只会返回一个降级的 `perplexity-search`，这是正常的。
 
-## Screenshots
-**ADMIN Panel**
-`https://yourdomain.com/admin/`
-<img width="2628" height="2052" alt="image" src="https://github.com/user-attachments/assets/997f0ae0-9f76-4d53-ba28-625068b508d1" />
+**3. 绑定 Perplexity 账号**
 
-**OpenAI Playground**
-`https://yourdomain.com/playground/`
-![OpenAI Playground with persistent native follow-up conversations](docs/images/openai-playground-native-sessions.png)
+打开 `https://你的域名/admin/`，填入 `PPLX_ADMIN_TOKEN` 登录，点 **NEW TOKEN**：
 
-## Getting Started
+- **标识**：随便填个好认的，比如你的邮箱
+- **Cookies**：登录 perplexity.ai 后按 F12 → Network → 刷新 → 点任意一个发往
+  `www.perplexity.ai` 的请求 → Request Headers → 复制 `cookie:` 后面那一整串
 
-### Docker Compose Deployment
+面板会自动从中挑出真正需要的两个 cookie（`__Secure-pplx.session.<uuid>` 与
+`__Host-pplx-last-active-account`），并丢弃 `cf_clearance`、`__cf_bm` 之类的
+临时指纹 cookie。
 
-#### 1. Prepare Configuration
+> 也可以退而求其次用环境变量 `PPLX_SESSION_TOKEN` + `PPLX_NEXT_AUTH_CSRF_TOKEN`，
+> 但那只在浏览器仍保留旧版 `__Secure-next-auth.session-token` 时可用。
 
-Copy and edit the configuration file:
+绑定成功后：
 
 ```bash
-cp token_pool_config-example.json token_pool_config.json
+curl -s -H "Authorization: Bearer $MCP_TOKEN" $D/v1/models | python3 -c "import sys,json;print(len(json.load(sys.stdin)['data']),'models')"
 ```
 
-Edit `token_pool_config.json` with your Perplexity account tokens:
+模型数量会从 1 变成你订阅可用的全部模型（Pro 账号会多出十几个）。
 
-```json
-{
-  "heart_beat": {
-    "enable": true,
-    "question": "What is the date today?",
-    "interval": 6,
-    "tg_bot_token": "your-telegram-bot-token",
-    "tg_chat_id": "your-telegram-chat-id"
-  },
-  "fallback": {
-    "fallback_to_auto": true
-  },
-  "incognito": {
-    "enabled": false
-  },
-  "tokens": [
-    {
-      "id": "account1@example.com",
-      "csrf_token": "your-csrf-token-1",
-      "session_token": "your-session-token-1"
-    },
-    {
-      "id": "account2@example.com",
-      "cookies": {
-        "__Secure-pplx.session.<account-uuid>": "your-session-cookie",
-        "__Host-pplx-last-active-account": "<account-uuid>"
-      }
-    }
-  ]
-}
-```
-
-> **How to get tokens:** Open perplexity.ai -> F12 Developer Tools -> Application -> Cookies.
-> Each account needs **either** the legacy pair **or** a `cookies` map:
-> - **Current site (recommended):** copy `__Secure-pplx.session.<account-uuid>` and
->   `__Host-pplx-last-active-account` into `cookies`, using the cookie names exactly as shown.
->   The session cookie rotates; the server writes the latest value back to the config file.
-> - **Legacy:** `csrf_token` = `next-auth.csrf-token`, `session_token` =
->   `__Secure-next-auth.session-token` (only if your browser still has these cookies).
-
-#### Heartbeat Configuration (Recommand, handle cookie expire!)
-
-Periodically checks token health and notifies via Telegram:
-
-| Option | Description |
-|--------|-------------|
-| `enable` | Enable heartbeat checks |
-| `question` | Question used for testing |
-| `interval` | Check interval (in hours) |
-| `tg_bot_token` | Telegram Bot Token |
-| `tg_chat_id` | Telegram Chat ID |
-
-#### Fallback Configuration (Optional)
-
-Automatically downgrades to anonymous Auto mode when all tokens are unavailable:
-
-| Option | Description |
-|--------|-------------|
-| `fallback_to_auto` | Enable fallback to anonymous mode (default `true`) |
-
-#### Incognito Configuration (Optional)
-
-When enabled, forces all queries (MCP and OpenAI endpoints) to run in incognito mode, preventing search history from being saved on Perplexity accounts:
-
-| Option | Description |
-|--------|-------------|
-| `enabled` | Force incognito mode for all queries (default `false`) |
-
-> Can also be toggled at runtime via the Admin UI or `POST /incognito/config` API.
-
-#### 2. Start the Service
+### 不用模版，手动部署
 
 ```bash
-# Create .env file (optional)
-cp .env.example .env
-
-# Start services
-docker compose up -d
+git clone https://github.com/wsbjj/perplexity-ai-railway.git
+cd perplexity-ai-railway
+railway init --name perplexity-ai
+railway add -s perplexity-mcp -r wsbjj/perplexity-ai-railway --branch main
+railway volume add -m /app/data
+printf '%s' "$(openssl rand -hex 32)" | railway variable set MCP_TOKEN --stdin --service perplexity-mcp
+printf '%s' "$(openssl rand -hex 32)" | railway variable set PPLX_ADMIN_TOKEN --stdin --service perplexity-mcp
+railway domain -s perplexity-mcp -p 8000
 ```
 
-#### docker-compose.yml Example
+---
 
-```yml
-services:
-  perplexity-mcp:
-    image: shancw/perplexity-mcp:latest
-    container_name: perplexity-mcp
-    ports:
-      - "${MCP_PORT:-8000}:8000"
-    environment:
-      - MCP_TOKEN=${MCP_TOKEN:-sk-123456}
-      - PPLX_ADMIN_TOKEN=${PPLX_ADMIN_TOKEN:-}
-      # - PPLX_SESSION_DB=/app/data/webui_sessions.sqlite3
-      # - SOCKS_PROXY=${SOCKS_PROXY:-}
-    volumes:
-      # Mount the token pool and persistent daily model cache
-      - ./token_pool_config.json:/app/token_pool_config.json
-      - ./data:/app/data
-    restart: unless-stopped
+## 使用
+
+### 1. OpenAI 兼容接口
+
 ```
-
-#### .env Variables
+Base URL:  https://你的域名/v1
+API Key:   MCP_TOKEN 的值
+```
 
 ```bash
-MCP_PORT=8000
-MCP_TOKEN=sk-123456
-PPLX_ADMIN_TOKEN=your-admin-token
-# PPLX_SESSION_DB=./data/webui_sessions.sqlite3
-# Optional outside Docker:
-# PPLX_MODELS_CONFIG_URL=https://raw.githubusercontent.com/escapeWu/perplexity-ai/main/catalog/model_config_v2.json
-# PPLX_MODEL_CACHE_PATH=./data/model_config_v2.json
-# PPLX_MODEL_CACHE_TTL=86400
+curl -s -X POST https://你的域名/v1/chat/completions \
+  -H "Authorization: Bearer $MCP_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "perplexity-search",
+    "messages": [{"role": "user", "content": "今天有什么科技新闻？"}],
+    "stream": true
+  }'
 ```
 
-## Multi-Token Pool (Load Balancing)
+把 Base URL 和 Key 填进任何 OpenAI 兼容客户端（Cherry Studio、LobeChat、NextChat、
+opencodex 等）即可使用。
 
-Configure multiple Perplexity account tokens to enable load balancing and high availability. See the "Prepare Configuration" section above for the JSON structure.
-
-## MCP Configuration
+### 2. MCP
 
 ```json
 {
   "mcpServers": {
     "perplexity": {
       "type": "http",
-      "url": "http://127.0.0.1:8000/mcp",
-      "headers": {
-        "Authorization": "Bearer sk-123456"
-      }
+      "url": "https://你的域名/mcp",
+      "headers": { "Authorization": "Bearer 你的MCP_TOKEN" }
     }
   }
 }
 ```
 
-### MCP Tools
+| 工具 | 适用场景 |
+| --- | --- |
+| `perplexity_ask_v2` | 实时搜索；支持指定模型、`thinking`、文件、`session_id` |
+| `perplexity_research_v2` | Deep Research；支持文件和 `session_id` |
+| `perplexity_task_submit` / `perplexity_task_status` / `perplexity_task_cancel` | 后台长任务：提交、查询、取消 |
 
-| Tool | When to use |
-|------|-------------|
-| `perplexity_ask_v2` | Focused current search with optional OAI model ID, `thinking`, files, and `session_id` |
-| `perplexity_research_v2` | Deep Research with optional files and `session_id` |
-| `get_skill_index`, `get_tasks_use` | Discover and read the detached-task operating guide |
-| `perplexity_task_submit` | Start a detached search or research task and return `job_id` |
-| `perplexity_task_status` | Observe a detached task; only `state: completed` is complete |
-| `perplexity_task_cancel` | Explicitly cancel a detached task |
+不传 `session_id` 时每次调用会新建会话，并在返回结果顶层带回会话 ID，后续轮次带上它即可延续上下文。
 
-The companion Python REST client exposes methods with these same names and normalizes REST responses to the same top-level `status`, `session_id`, `job_id`, `model`, and `data`/`snapshot` conventions. This lets integrations change transport without changing their search workflow.
+### 3. 接入 Codex / opencodex
 
-`perplexity_ask_v2` defaults to `perplexity-search` when `model` is omitted.
-Its `model` values are the same IDs returned by `/v1/models`, for example
-`gpt-5-6-terra`; `thinking: true` selects the paired thinking model. Both v2
-tools create a session when `session_id` is omitted and return it at the top
-level of the result:
+opencodex 可以直接把它当成自定义 provider：
 
-```json
-{
-  "status": "ok",
-  "session_id": "sess_...",
-  "model": "gpt-5-6-terra-thinking",
-  "data": {"answer": "...", "sources": []}
-}
-```
-
-The legacy tools `list_models`, `search`, `research`, `perplexity_ask`,
-`perplexity_search`, `perplexity_reason`, `perplexity_research`, and
-`toggle_builtin_tools` remain callable for compatibility, but are marked
-`deprecated` / `pending_removal` in MCP metadata and descriptions.
-
-## OpenAI Compatible Endpoints
-
-**Base URL:** `http://127.0.0.1:8000/v1`
-**Authorization:** `Bearer <MCP_TOKEN>`
-
-Chat completions stream live upstream events by default. Pass `"stream": false`
-to wait for a complete JSON response. The Playground also requests optional
-Perplexity progress chunks so it can display analysis, web search, source review,
-and answer-writing stages. Other OpenAI clients can opt in with
-`"perplexity": {"include_progress": true}`; the extension is disabled by default
-for API compatibility.
-
-Every valid chat-completions request is assigned a native conversation session.
-Omit `session_id` to start one, then read the top-level `session_id` from the JSON
-response. Streaming responses include the same value in every JSON SSE chunk and
-in the `X-Session-ID` response header. To continue, send that ID with only the
-current user turn:
-
-```json
-{
-  "model": "perplexity-search",
-  "session_id": "sess_...",
-  "messages": [{"role": "user", "content": "Now compare it with Tokyo"}],
-  "stream": false
-}
-```
-
-The first turn permanently binds the session to one compatible Perplexity
-account. Follow-ups reuse that account and the upstream native cursor; they never
-fail over to another account. An unknown session returns HTTP 404.
-
-### Examples
-
-#### List Models
 ```bash
-curl http://127.0.0.1:8000/v1/models -H "Authorization: Bearer sk-123456"
+ocx provider add perplexity \
+  --adapter openai-chat \
+  --base-url https://你的域名/v1 \
+  --api-key 你的MCP_TOKEN \
+  --default-model perplexity-search
+ocx models provider perplexity on
+ocx sync
 ```
 
-#### Chat Completions (Non-streaming)
+Codex CLI 也可直接指向本地反代（记得用 `--local-provider lmstudio` 绕过客户端的模型名校验）：
+
 ```bash
-curl http://127.0.0.1:8000/v1/chat/completions \
-  -H "Authorization: Bearer sk-123456" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "perplexity-search",
-    "messages": [{"role": "user", "content": "How is the weather today?"}],
-    "stream": false
-  }'
+export OPENAI_API_BASE=https://你的域名/v1
+export OPENAI_API_KEY=你的MCP_TOKEN
+codex -m sonar --local-provider lmstudio
 ```
 
-#### Chat Completions (Streaming)
+### 4. 模型
+
+模型清单由服务每天从上游 catalog 自动刷新，实际可用范围取决于你账号的订阅等级
+（Pro 账号只会看到 Pro 模型，Max 专属模型只会路由到 Max 账号）。当前常见条目：
+
+```
+perplexity-search / perplexity-thinking / perplexity-deepsearch
+gpt-6-sol(+thinking)          claude-sonnet-5(+thinking)
+gemini-3-8-flash(+thinking)   grok-4-7(+thinking)
+kimi-k3-thinking              glm-5-3-thinking
+nemotron-3-ultra-thinking
+```
+
+传 `thinking: true` 或 `reasoning_effort: high` 会自动选择配对的思考模型；
+`reasoning_effort: none` 则使用普通模型。
+
+---
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `MCP_TOKEN` | 无（必填） | 接口认证密钥 |
+| `PPLX_ADMIN_TOKEN` | 空 | 管理面板密钥；不设置则管理功能关闭 |
+| `PPLX_TOKEN_POOL_CONFIG` | `/app/data/config/token_pool_config.json` | 号池配置文件路径（镜像内已默认） |
+| `PPLX_LEGACY_TOKEN_POOL_CONFIG` | `/app/legacy-token-pool.json` | 首次启动时导入的旧配置文件 |
+| `PPLX_SESSION_DB` | `/app/data/webui_sessions.sqlite3` | WebUI / OAI / MCP 共用的会话数据库 |
+| `LOG_LEVEL` | `INFO` | 日志级别 |
+| `LOG_FILE` | `/app/data/logs/perplexity.log` | 日志文件 |
+| `PPLX_MODELS_CONFIG_URL` | 上游 catalog 地址 | 模型清单来源 |
+| `SOCKS_PROXY` | 空 | 出站代理，形如 `socks5://127.0.0.1:1080` |
+| `PPLX_SESSION_TOKEN` + `PPLX_NEXT_AUTH_CSRF_TOKEN` | 空 | 单账号方式（仅旧版 cookie 可用） |
+
+---
+
+## 常见问题
+
+**`/v1/models` 只有一个模型？**
+说明还没绑定账号，服务运行在匿名降级模式。按上面「绑定 Perplexity 账号」操作即可。
+
+**访问根路径 404？**
+正常现象。应用没有首页，浏览器入口是 `/admin/`（号池面板）和 `/playground/`（调试台）。
+
+**客户端报 400 `reasoning_effort is unsupported`？**
+本 fork 已修复：现在会把该字段映射到 `thinking`。如果你自建的是上游版本，更新到本仓库即可。
+
+**能当 Codex / Claude Code 的主力 agent 模型吗？**
+不能。这些模型走的是 Perplexity 的搜索接口，**不支持 function calling / 工具调用**，
+客户端发来的工具定义会被忽略。当问答、资料检索、调研用没问题，别指望它读写文件、跑命令。
+
+**cookie 会过期吗？**
+服务每 6 小时做一次心跳检查，必要时自动续期并把轮换后的新 cookie 写回配置文件。
+如果面板上账号标红，重新粘贴一次 cookie 即可。也可以配 `heart_beat.tg_bot_token` / `tg_chat_id`
+让它在失效时发 Telegram 提醒。
+
+**怎么跟上上游更新？**
 ```bash
-curl http://127.0.0.1:8000/v1/chat/completions \
-  -H "Authorization: Bearer sk-123456" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "perplexity-thinking",
-    "messages": [{"role": "user", "content": "Analyze AI trends"}],
-    "perplexity": {"include_progress": true}
-  }'
+git remote add upstream https://github.com/escapeWu/perplexity-ai.git
+git fetch upstream && git merge upstream/main
 ```
+README 与面板文案等文件可能产生冲突，按需保留本 fork 的版本即可。
 
-Progress updates remain regular `chat.completion.chunk` events with an empty
-content delta and an additional `perplexity_progress` field. Clients that do not
-understand the extension can leave it disabled.
+---
 
-For catalog models that provide both regular and reasoning variants, pass
-`"thinking": true` while keeping the regular model ID. The server resolves the
-paired `-thinking` model before calling Perplexity:
+## 风险声明
 
-```json
-{
-  "model": "gpt-5-6-terra",
-  "thinking": true,
-  "messages": [{"role": "user", "content": "Analyze this problem"}]
-}
-```
+- 本项目通过逆向网页版内部接口实现，**违反 Perplexity 使用条款**，存在被限流或封号的真实风险。
+- cookie 等同于账号登录态，泄露即账号被接管。请只在自有服务器上部署，不要提交到仓库、
+  不要粘贴给任何第三方在线服务；Railway 卷里的配置文件是明文存储的。
+- 上游接口随时可能变动导致项目失效；Railway 也可能依据其政策下架相关服务。
+- 仅供个人学习与研究使用，请自行承担后果。
 
-Models without a reasoning variant return an `invalid_request_error`.
-`reasoning_effort` is intentionally rejected: Perplexity's web endpoint exposes
-reasoning through model selection and does not provide a verified effort control.
+---
 
-### Supported Models
+## 致谢
 
-The repository publishes a validated Perplexity v2 model snapshot at
-`catalog/model_config_v2.json`. Servers fetch that snapshot from GitHub Raw
-every 24 hours and persist a local cache. `/v1/models`, MCP `list_models`,
-validation, and upstream `model_preference` routing all use that same catalog.
-
-- Pro accounts expose Pro models.
-- Max accounts expose both Pro and Max models.
-- Max-only requests are routed only to Max accounts.
-- Browser-agent entries are excluded because they do not use the search API.
-- `perplexity-search`, `perplexity-thinking`, and `perplexity-deepsearch`
-  remain stable default IDs. Use `GET /v1/models` for the current full list.
-
-If the daily refresh fails, the last valid on-disk catalog remains active.
-Static built-in mappings are used only when no valid cache exists.
+- 上游项目：[escapeWu/perplexity-ai](https://github.com/escapeWu/perplexity-ai)
+- 更上游：[helallao/perplexity-ai](https://github.com/helallao/perplexity-ai)
+- 社区：[LINUX DO](https://linux.do)
 
 ## Star History
 
-<a href="https://www.star-history.com/?type=date&repos=escapeWu%2Fperplexity-ai">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=escapeWu/perplexity-ai&type=date&theme=dark&legend=top-left&sealed_token=rp3Vi8ZSB1OEa331-tOQMgrr5wv-1nwAH-1AG_dSGwbIazYZebUsvw3naomkRhFRbGZ47UUwNWiRarYYr4sV7nvIJsi1k-IBJVVUF9zUN6AgkQMp_dLulw" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=escapeWu/perplexity-ai&type=date&legend=top-left&sealed_token=rp3Vi8ZSB1OEa331-tOQMgrr5wv-1nwAH-1AG_dSGwbIazYZebUsvw3naomkRhFRbGZ47UUwNWiRarYYr4sV7nvIJsi1k-IBJVVUF9zUN6AgkQMp_dLulw" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=escapeWu/perplexity-ai&type=date&legend=top-left&sealed_token=rp3Vi8ZSB1OEa331-tOQMgrr5wv-1nwAH-1AG_dSGwbIazYZebUsvw3naomkRhFRbGZ47UUwNWiRarYYr4sV7nvIJsi1k-IBJVVUF9zUN6AgkQMp_dLulw" />
- </picture>
+<a href="https://www.star-history.com/?type=date&repos=wsbjj%2Fperplexity-ai-railway">
+  <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=wsbjj/perplexity-ai-railway&type=Date" />
 </a>
-
-## What's New
-+ **2026-09-27**: v2.1.1 — Refresh the persisted model catalog on server startup while retaining the last valid cache on failure; route unknown or retired model IDs to Best/Best Thinking with an explicit final-answer notice and requested/effective model metadata, while preserving subscription checks and idempotent replay.
-+ **2026-09-26**: v2.1.0 — Rename the WebUI heartbeat control to Auto Renew Cookie, enable cookie renewal by default, and preserve rolling session cookies during account health checks.
-+ **2026-09-20**: v2.0.0 — **Major runtime rewrite**: replace the blocking per-request chat path with a durable, observable task runtime shared by OAI, MCP, and WebUI. Add account-affine concurrency, priority queues, deadlines, idempotency, retained events, resumable streams/results, strict upstream validation, bounded inputs and snapshots, atomic persistence, and background tasks that survive observer disconnects.
-+ **2026-08-16**: v1.15.0 — Add OpenAI-aligned v2 MCP ask/research tools and REST session continuation with account-bound conversations, refresh the dynamic model catalog, deprecate legacy MCP tools, and align the Playground model and Thinking controls with Perplexity WebUI.
-+ **2026-08-13**: v1.14.0 — Add server-backed Playground conversations with a responsive session sidebar, native Perplexity follow-up threads, persistent history, and immutable per-conversation account binding without cross-account failover.
-+ **2026-08-12**: v1.13.3 — Upgrade curl-cffi browser fingerprints to stop Grok 4.5 and Claude Sonnet 5 requests from silently falling back to Best/turbo, and expose requested-versus-effective model metadata with a server warning when upstream downgrades recur.
-+ **2026-07-31**: v1.13.2 — Prevent all explicitly selected models from being silently downgraded by matching Perplexity's current browser request protocol, and publish a validated Pro/Max model snapshot that servers refresh daily from GitHub Raw.
-+ **2026-07-30**: v1.13.1 — Restore real-time Playground progress and answer streaming for Perplexity's new block-based response protocol, reconstruct offset Markdown chunks, and deduplicate repeated lifecycle stages.
-+ **2026-07-30**: v1.13.0 — Add a daily cached Perplexity model catalog with Pro/Max-aware discovery and account routing, expose live model metadata in the Playground, and remove unused client-side SDK, account automation, Labs, examples, and legacy assets for server-only deployment.
-+ **2026-07-29**: v1.12.0 — Add optional structured Perplexity progress events and a live Playground stage timeline, preserve partial output across stream failures and cancellation, and align service requests with the browser `query_source` required by current models.
-+ **2026-07-29**: v1.11.0 — Stream OpenAI-compatible chat completions from upstream in real time by default, retain opt-in complete JSON responses with `stream: false`, add WebUI stream mode controls and working cancellation, and harden stream failover and cleanup.
-+ **2026-07-29**: v1.10.1 — Close synchronous streaming responses reliably, move user-info network calls outside the pool lock, use starvation-free smooth weighted round-robin scheduling, sync runtime dependencies, and make Playground cancellation abort active requests.
-+ **2026-07-28**: v1.10.0 — Add the current non-Max model lineup (Sonar 2, GPT-5.6 Terra, Gemini 3.1 Pro, Claude Sonnet 5, Kimi K3, GLM 5.2, Grok 4.5, and Nemotron 3 Ultra), centralize model mappings, and sync MCP/OpenAI discovery, tests, and docs.
-
-## Upstream Project
-https://github.com/helallao/perplexity-ai 
-+ fix param lack, auto redirect to GPT-5.6-nano, and add fancy mcp/restapi server 
-<img width="745" height="229" alt="image" src="https://github.com/user-attachments/assets/2513e13e-cfc3-49d7-82cd-8dbae20f8991" />

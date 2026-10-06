@@ -5,7 +5,21 @@ This module provides helper functions for validation, OpenAI-compatible API,
 and other common operations used by the server.
 """
 
+import os
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+
+def _env_positive_int(name: str, default: int) -> int:
+    try:
+        value = int(os.getenv(name, "") or default)
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+# 单条 query 的最大长度；上游网页接口对超长 query 不友好，默认 10000，
+# 可通过 PPLX_MAX_QUERY_CHARS 调整。
+MAX_QUERY_CHARS = _env_positive_int("PPLX_MAX_QUERY_CHARS", 10000)
 
 try:
     from ..config import (
@@ -329,7 +343,7 @@ def sanitize_query(query: str) -> str:
     if not query:
         raise ValidationError("Query cannot be empty")
 
-    if len(query) > 10000:
-        raise ValidationError("Query is too long (max 10000 characters)")
+    if len(query) > MAX_QUERY_CHARS:
+        raise ValidationError(f"Query is too long (max {MAX_QUERY_CHARS} characters)")
 
     return query

@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .file_sources import extract_files
 from .job_store import JobError
 from .files_store import attachment_input_budget
-from .utils import resolve_chat_model
+from .utils import MAX_QUERY_CHARS, resolve_chat_model
 from .webui_sessions import validate_session_id
 
 MAX_JSON_BYTES = 32 * 1024 * 1024
@@ -56,9 +56,17 @@ def message_text(content):
 
 def query_from_messages(messages):
     labels = {"user": "User", "assistant": "Assistant", "system": "System"}
-    return "\n\n".join(f"[{labels[msg['role']]}]: {message_text(msg.get('content'))}"
-                       for msg in messages if isinstance(msg, dict) and msg.get("role") in labels
-                       and message_text(msg.get("content")))
+    flattened = "\n\n".join(f"[{labels[msg['role']]}]: {message_text(msg.get('content'))}"
+                              for msg in messages if isinstance(msg, dict) and msg.get("role") in labels
+                              and message_text(msg.get("content")))
+    if len(flattened) <= MAX_QUERY_CHARS:
+        return flattened
+    # OpenAI 兼容接口没有独立的上文通道，整段对话会被拼成一条 query。
+    # 超出上游可接受长度时保留最新的内容并从头部截断，而不是直接 400，
+    # 这样 Codex、opencodex 这类带超长 system 提示的客户端仍能拿到答案。
+    notice = "[earlier context truncated]\n"
+    keep = max(MAX_QUERY_CHARS - len(notice), 1)
+    return notice + flattened[-keep:]
 
 
 def has_attachments(messages):

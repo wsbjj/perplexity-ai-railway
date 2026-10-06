@@ -124,12 +124,22 @@ async def parse_chat_body(body, pool, *, origin="webui"):
     for field in ("stream", "thinking"):
         if field in body and not isinstance(body[field], bool):
             raise ValueError(f"{field} must be a boolean")
-    if body.get("reasoning_effort") is not None:
-        raise ValueError("reasoning_effort is unsupported; use thinking=true")
+    thinking = body.get("thinking", False)
+    if "thinking" not in body:
+        # 兼容 OpenAI 风格的 reasoning_effort / reasoning.effort：
+        # 显式 thinking 优先；"none" 视为关闭思考，其余取值视为开启，
+        # 避免 Codex、opencodex 等客户端因为带上该字段直接 400。
+        effort = body.get("reasoning_effort")
+        if effort is None:
+            reasoning = body.get("reasoning")
+            if isinstance(reasoning, dict):
+                effort = reasoning.get("effort")
+        if isinstance(effort, str) and effort.strip():
+            thinking = effort.strip().lower() != "none"
     options = body.get("perplexity", {})
     if not isinstance(options, dict) or not isinstance(options.get("include_progress", False), bool):
         raise ValueError("perplexity.include_progress must be a boolean")
-    resolved = resolve_chat_model(model_id, body.get("thinking", False), pool.get_model_subscription_tiers())
+    resolved = resolve_chat_model(model_id, thinking, pool.get_model_subscription_tiers())
     flatten = origin == "oai" and session_id is None
     files = await resolve_files(messages if flatten else [user])
     query = query_from_messages(messages) if flatten else message_text(user.get("content", "")).strip()

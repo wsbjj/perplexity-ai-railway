@@ -39,6 +39,7 @@ official API credits. Proxying does not add quota — it only changes the entry 
 | `railway.toml` | Builds with the repo Dockerfile, health-checks `/ready`, restarts on failure |
 | Bilingual admin UI | `EN / 中文` switch in the dashboard header, stored in localStorage, defaults to the browser language |
 | `reasoning_effort` support | Codex/opencodex requests no longer fail with HTTP 400; the value is mapped to `thinking` |
+| Long-context truncation | Over-long conversations are truncated from the head (with an `[earlier context truncated]` marker) instead of failing with HTTP 400; tune with `PPLX_MAX_QUERY_CHARS` |
 | Bilingual docs | This file is the English README; the Chinese one is the repository default ([README.md](README.md)) |
 
 ---
@@ -217,6 +218,7 @@ Pass `thinking: true` or `reasoning_effort: high` to select the paired thinking 
 | `LOG_LEVEL` | `INFO` | Log level |
 | `LOG_FILE` | `/app/data/logs/perplexity.log` | Log file |
 | `PPLX_MODELS_CONFIG_URL` | upstream catalog | Model catalogue source |
+| `PPLX_MAX_QUERY_CHARS` | `10000` | Max length of a single query; longer input is truncated from the head. Upstream accepts up to ~30000 characters — beyond ~40000 the tail is silently dropped, so keep this at or below 30000 |
 | `SOCKS_PROXY` | empty | Outbound proxy, e.g. `socks5://127.0.0.1:1080` |
 | `PPLX_SESSION_TOKEN` + `PPLX_NEXT_AUTH_CSRF_TOKEN` | empty | Single-account mode (legacy cookies only) |
 
@@ -234,6 +236,14 @@ Expected — there is no landing page. Use `/admin/` (pool dashboard) or `/playg
 **Client returns 400 `reasoning_effort is unsupported`?**
 Fixed in this fork; the field is now mapped to `thinking`. If you deployed upstream
 directly, update to this repository.
+
+**Client returns 400 `Query is too long`?**
+The OpenAI-compatible endpoint has no separate context channel: the whole conversation
+(system prompt included) is flattened into a single query. This fork now keeps the newest
+content, truncates from the head and adds an `[earlier context truncated]` marker once
+`PPLX_MAX_QUERY_CHARS` (default 10000) is exceeded, instead of failing. Measured against
+Perplexity upstream: content up to ~30000 characters arrives intact, while from ~40000
+characters the tail is silently dropped — keep the value at or below 30000.
 
 **Can it drive Codex / Claude Code as an agent?**
 No. These models sit behind Perplexity's search interface and **do not support function

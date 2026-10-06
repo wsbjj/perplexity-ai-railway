@@ -38,6 +38,7 @@
 | `railway.toml` | 指定用仓库自带 Dockerfile 构建、以 `/ready` 作为健康检查、失败自动重启 |
 | 管理面板中英文切换 | 面板右上角 `EN / 中文` 按钮，偏好记录在浏览器本地，默认跟随浏览器语言 |
 | 兼容 `reasoning_effort` | Codex、opencodex 等客户端携带该字段时不再返回 400，而是按语义映射到 `thinking` |
+| 长上下文截断降级 | 整段对话超出上限时保留最新内容并从头部截断（加 `[earlier context truncated]` 标记），不再直接 400；上限可用 `PPLX_MAX_QUERY_CHARS` 调整 |
 | 中英文文档 | 本文件为中文版并作为仓库默认 README，英文版见 [README.en.md](README.en.md) |
 
 ---
@@ -212,6 +213,7 @@ nemotron-3-ultra-thinking
 | `LOG_LEVEL` | `INFO` | 日志级别 |
 | `LOG_FILE` | `/app/data/logs/perplexity.log` | 日志文件 |
 | `PPLX_MODELS_CONFIG_URL` | 上游 catalog 地址 | 模型清单来源 |
+| `PPLX_MAX_QUERY_CHARS` | `10000` | 单条 query 上限；超出时从头部截断。实测上游在 30000 字符内能完整收到内容，40000 字符起尾部会被静默丢弃，建议不要超过 30000 |
 | `SOCKS_PROXY` | 空 | 出站代理，形如 `socks5://127.0.0.1:1080` |
 | `PPLX_SESSION_TOKEN` + `PPLX_NEXT_AUTH_CSRF_TOKEN` | 空 | 单账号方式（仅旧版 cookie 可用） |
 
@@ -227,6 +229,13 @@ nemotron-3-ultra-thinking
 
 **客户端报 400 `reasoning_effort is unsupported`？**
 本 fork 已修复：现在会把该字段映射到 `thinking`。如果你自建的是上游版本，更新到本仓库即可。
+
+**客户端报 400 `Query is too long`？**
+OpenAI 兼容接口没有独立的上文通道，整段对话（包含 system 提示）会被拼成一条 query 发送。
+本 fork 现在超出 `PPLX_MAX_QUERY_CHARS`（默认 10000）时会保留最新内容、从头部截断，
+并加上 `[earlier context truncated]` 标记，不再直接报错。
+实测 Perplexity 上游在 30000 字符内可完整收到内容，从 40000 字符起尾部会被静默丢弃，
+因此调大该值时建议不要超过 30000；追求稳定的检索质量，保持在 10000 左右更保险。
 
 **能当 Codex / Claude Code 的主力 agent 模型吗？**
 不能。这些模型走的是 Perplexity 的搜索接口，**不支持 function calling / 工具调用**，
